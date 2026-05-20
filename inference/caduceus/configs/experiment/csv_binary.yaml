@@ -1,0 +1,49 @@
+# @package _global_
+defaults:
+  - /pipeline: csv_binary
+  - /model: ???
+  - override /scheduler: cosine_warmup_timm
+
+task:
+  loss:
+    _name_: cross_entropy
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  num_nodes: 1
+  accumulate_grad_batches: ${div_up:${train.global_batch_size}, ${eval:${trainer.devices} * ${dataset.batch_size} * ${trainer.num_nodes}}}
+  max_epochs: 20
+  precision: 16
+  gradient_clip_val: 1.0
+
+model:
+  _name_: dna_embedding
+
+dataset:
+  tokenizer_name: char
+  rc_aug: false
+
+scheduler:
+  t_in_epochs: False
+  t_initial: ${eval:${train.train_len} * ${trainer.max_epochs}}
+  warmup_lr_init: 1e-6
+  warmup_t: ${eval:${train.train_len} * ${trainer.max_epochs} * 0.01}
+  lr_min: ${eval:0.1 * ${optimizer.lr}}
+
+optimizer:
+  lr: 6e-4
+  weight_decay: 0.1
+
+train:
+  seed: 2222
+  global_batch_size: ${dataset.batch_size}
+  train_len: 1000  # Placeholder, override based on your dataset size
+  test: true  # Enable testing after training
+  cross_validation: true  # Load best validation checkpoint for testing
+  remove_test_loader_in_eval: true
+  pretrained_model_path: ???
+  pretrained_model_strict_load: false
+  pretrained_model_state_hook:
+    _name_: load_backbone
+    freeze_backbone: false

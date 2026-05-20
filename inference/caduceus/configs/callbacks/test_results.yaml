@@ -1,0 +1,6 @@
+test_results:
+  # _target_: src.callbacks.test_results.TestResultsCallback
+  output_dir: null  # Uses trainer.log_dir by default
+  output_filename: test_results.json
+  save_predictions: true
+  predictions_filename: test_predictions.npz

@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files (too large for git)
+*.fasta
+*.fa
+*.fna
+*.gz
+*.tar
+*.tsv
+*.csv
+!requirements.txt
+
+# Output directories
+*_dataset/
+*_output/
+
+# Log files
+*.log
+*.out
+*.err
+
+# SLURM outputs
+slurm-*.out

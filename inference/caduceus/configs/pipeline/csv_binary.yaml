@@ -1,0 +1,19 @@
+# @package _global_
+defaults:
+  - /trainer: default
+  - /loader: default
+  - /dataset: csv_dataset
+  - /task: binary_classification
+  - /optimizer: adamw
+  - /scheduler: plateau
+  - /callbacks: [base, checkpoint, test_results, generalization_gap]
+
+train:
+  monitor: val/accuracy
+  mode: max
+
+encoder: id
+
+decoder:
+  _name_: sequence
+  mode: pool

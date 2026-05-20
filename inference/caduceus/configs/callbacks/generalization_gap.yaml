@@ -1,0 +1,7 @@
+generalization_gap:
+  max_gap: 0.03  # Stop if train_acc - val_acc > this value
+  train_metric: "train/accuracy"
+  val_metric: "val/accuracy"
+  min_epochs: 2  # Don't check gap until this many epochs
+  patience: 2  # Number of consecutive epochs gap can exceed threshold
+  verbose: True

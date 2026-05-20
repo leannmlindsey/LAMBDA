@@ -1,0 +1,6 @@
+early_stopping:
+  monitor: ${train.monitor}  # metric to monitor (same as checkpoint)
+  mode: ${train.mode}  # "max" or "min" depending on metric
+  patience: 10  # number of epochs with no improvement before stopping
+  min_delta: 0.0  # minimum change to qualify as improvement
+  verbose: True
