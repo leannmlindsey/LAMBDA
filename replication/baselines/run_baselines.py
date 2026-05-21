@@ -283,6 +283,17 @@ def write_predictions_and_metrics(
 def gather_eval_csvs(dataset_root: Path, window: str) -> List[Tuple[Path, str]]:
     """Return list of (csv_path, category) for every eval slice at this window.
 
+    Per-category behaviour:
+      - `binary`      → just test.csv (the single binary classification split)
+      - `error_bias`  → every *.csv in the directory, including test.csv.
+                        The diagnostic splits in error_and_bias_<window>/ have
+                        descriptive names (gc_control_<window>_test.csv,
+                        bacterial_cds_<window>.csv, phage_segments_<window>_<stride>.csv);
+                        test.csv is a copy of the binary test, kept as a
+                        within-category reference row so each diagnostic can
+                        be compared directly to the baseline.
+      - `genome_wide` → every *.csv (one per assembly).
+
     Prints a SKIP line for any category whose subdir isn't found (with the
     candidate paths it tried) so missing data is visible in the SLURM log
     rather than silently dropped.
@@ -295,6 +306,7 @@ def gather_eval_csvs(dataset_root: Path, window: str) -> List[Tuple[Path, str]]:
             print(f"  [skip] {category} / {window}: no matching subdir under {dataset_root}")
             print(f"         tried: {candidates}")
             continue
+
         if category == "genome_wide":
             csvs = sorted(cat_dir.glob("*.csv"))
             if not csvs:
@@ -303,7 +315,18 @@ def gather_eval_csvs(dataset_root: Path, window: str) -> List[Tuple[Path, str]]:
             print(f"  [found] {category} / {window}: {len(csvs)} CSV(s) in {cat_dir}")
             for p in csvs:
                 out.append((p, category))
-        else:
+
+        elif category == "error_bias":
+            csvs = sorted(cat_dir.glob("*.csv"))
+            if not csvs:
+                print(f"  [skip] {category} / {window}: no .csv files in {cat_dir}")
+                continue
+            print(f"  [found] {category} / {window}: {len(csvs)} file(s) in {cat_dir}")
+            for p in csvs:
+                print(f"          • {p.name}")
+                out.append((p, category))
+
+        else:  # binary
             test_csv = cat_dir / "test.csv"
             if not test_csv.exists():
                 print(f"  [skip] {category} / {window}: {test_csv} not found "
@@ -311,6 +334,7 @@ def gather_eval_csvs(dataset_root: Path, window: str) -> List[Tuple[Path, str]]:
                 continue
             print(f"  [found] {category} / {window}: {test_csv}")
             out.append((test_csv, category))
+
     return out
 
 

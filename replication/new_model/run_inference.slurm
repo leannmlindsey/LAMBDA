@@ -50,15 +50,32 @@ THRESHOLD=0.5                 # pred_label threshold
 # Set if the model needs trust_remote_code (DNABERT-2 yes; GENA-LM no).
 TRUST_REMOTE_CODE=""
 
+# === Environment ===
+# Conda env to activate. Set to whatever env you've created with the HF stack
+# (the gena_lm env from setup_lambda.sh in the GENA-LM repo works directly).
+NEW_MODEL_ENV="lambda_new_model"
+
+# Full path to this directory (replication/new_model/) on your cluster.
+# SLURM copies the submission script to a temp dir before running, so
+# BASH_SOURCE-based discovery does not work — must be hardcoded.
+SCRIPT_DIR="/data/lindseylm/GLM_EVALUATIONS/NAR_GENOMICS_LAMBDA_REPO/LAMBDA/replication/new_model"
+
 #####################################################################
 # END CONFIGURATION
 #####################################################################
 
-module load conda
-module load CUDA/12.8
-source activate lambda_new_model
+# Load modules (suppress errors for non-Biowulf systems)
+module load conda 2>/dev/null || true
+module load CUDA/12.8 2>/dev/null || true
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Set CUDA_HOME if not set
+if [ -z "${CUDA_HOME:-}" ]; then
+    export CUDA_HOME=$(dirname $(dirname $(which nvcc 2>/dev/null))) 2>/dev/null || true
+fi
+
+# Activate conda environment (tries modern `conda activate` then falls back
+# to legacy `source activate`)
+conda activate "${NEW_MODEL_ENV}" 2>/dev/null || source activate "${NEW_MODEL_ENV}" 2>/dev/null || true
 
 mkdir -p "$(dirname "${OUTPUT_CSV}")"
 
