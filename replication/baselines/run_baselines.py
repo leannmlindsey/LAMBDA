@@ -78,17 +78,30 @@ THRESHOLD_COLOR = "#333333"
 
 CATEGORIES = ["binary", "error_bias", "genome_wide"]
 
-DATASET_SUBDIR = {
-    ("binary", "2k"): "binary_segments_2k",
-    ("binary", "4k"): "binary_segments_4k",
-    ("binary", "8k"): "binary_segments_8k",
-    ("error_bias", "2k"): "error_and_bias_2k",
-    ("error_bias", "4k"): "error_and_bias_4k",
-    ("error_bias", "8k"): "error_and_bias_8k",
-    ("genome_wide", "2k"): "genome_wide_segments_2k_1k",
-    ("genome_wide", "4k"): "genome_wide_segments_4k_2k",
-    ("genome_wide", "8k"): "genome_wide_segments_8k_4k",
+# For each (category, window), try these subdirectories in order and use
+# whichever exists on disk. Supports both the standardized Zenodo layout
+# (binary_segments_2k/) and the existing Biowulf layout
+# (merged_datasets_filtered/2k/, phoenix/segments/2k_1k/).
+DATASET_SUBDIR_CANDIDATES = {
+    ("binary", "2k"): ["binary_segments_2k", "merged_datasets_filtered/2k", "2k"],
+    ("binary", "4k"): ["binary_segments_4k", "merged_datasets_filtered/4k", "4k"],
+    ("binary", "8k"): ["binary_segments_8k", "merged_datasets_filtered/8k", "8k"],
+    ("error_bias", "2k"): ["error_and_bias_2k", "error_and_bias/2k"],
+    ("error_bias", "4k"): ["error_and_bias_4k", "error_and_bias/4k"],
+    ("error_bias", "8k"): ["error_and_bias_8k", "error_and_bias/8k"],
+    ("genome_wide", "2k"): ["genome_wide_segments_2k_1k", "phoenix/segments/2k_1k"],
+    ("genome_wide", "4k"): ["genome_wide_segments_4k_2k", "phoenix/segments/4k_2k"],
+    ("genome_wide", "8k"): ["genome_wide_segments_8k_4k", "phoenix/segments/8k_4k"],
 }
+
+
+def resolve_subdir(dataset_root: Path, category: str, window: str) -> Path | None:
+    """Return the first matching subdir for (category, window), or None."""
+    for cand in DATASET_SUBDIR_CANDIDATES.get((category, window), []):
+        p = dataset_root / cand
+        if p.is_dir():
+            return p
+    return None
 
 
 # ─── Featurization ──────────────────────────────────────────────────────────
@@ -268,22 +281,36 @@ def write_predictions_and_metrics(
 # ─── Per-window pipeline ────────────────────────────────────────────────────
 
 def gather_eval_csvs(dataset_root: Path, window: str) -> List[Tuple[Path, str]]:
-    """Return list of (csv_path, category) for every eval slice at this window."""
+    """Return list of (csv_path, category) for every eval slice at this window.
+
+    Prints a SKIP line for any category whose subdir isn't found (with the
+    candidate paths it tried) so missing data is visible in the SLURM log
+    rather than silently dropped.
+    """
     out: List[Tuple[Path, str]] = []
     for category in CATEGORIES:
-        subdir = DATASET_SUBDIR.get((category, window))
-        if not subdir:
-            continue
-        cat_dir = dataset_root / subdir
-        if not cat_dir.exists():
+        cat_dir = resolve_subdir(dataset_root, category, window)
+        if cat_dir is None:
+            candidates = DATASET_SUBDIR_CANDIDATES.get((category, window), [])
+            print(f"  [skip] {category} / {window}: no matching subdir under {dataset_root}")
+            print(f"         tried: {candidates}")
             continue
         if category == "genome_wide":
-            for p in sorted(cat_dir.glob("*.csv")):
+            csvs = sorted(cat_dir.glob("*.csv"))
+            if not csvs:
+                print(f"  [skip] {category} / {window}: {cat_dir} has no .csv files")
+                continue
+            print(f"  [found] {category} / {window}: {len(csvs)} CSV(s) in {cat_dir}")
+            for p in csvs:
                 out.append((p, category))
         else:
             test_csv = cat_dir / "test.csv"
-            if test_csv.exists():
-                out.append((test_csv, category))
+            if not test_csv.exists():
+                print(f"  [skip] {category} / {window}: {test_csv} not found "
+                      f"(subdir {cat_dir} exists but has no test.csv)")
+                continue
+            print(f"  [found] {category} / {window}: {test_csv}")
+            out.append((test_csv, category))
     return out
 
 
@@ -293,9 +320,15 @@ def process_window(
     window: str,
     plot_data: dict | None,
 ) -> None:
-    train_csv = dataset_root / f"binary_segments_{window}" / "train.csv"
+    binary_dir = resolve_subdir(dataset_root, "binary", window)
+    if binary_dir is None:
+        candidates = DATASET_SUBDIR_CANDIDATES.get(("binary", window), [])
+        print(f"[skip] window {window}: no binary-category subdir under {dataset_root}")
+        print(f"       tried: {candidates}")
+        return
+    train_csv = binary_dir / "train.csv"
     if not train_csv.exists():
-        print(f"[skip] {train_csv} not found")
+        print(f"[skip] window {window}: train.csv missing — looked at {train_csv}")
         return
 
     print(f"\n=== window {window} ===")
@@ -350,8 +383,10 @@ def process_window(
 
     # ─── GC plot data: use the binary_segments test.csv ───────────────────
     if plot_data is not None:
-        binary_test = dataset_root / f"binary_segments_{window}" / "test.csv"
-        if binary_test.exists():
+        binary_test = binary_dir / "test.csv"
+        if not binary_test.exists():
+            print(f"  [warn] GC plot for {window}: {binary_test} not found, panel will be empty")
+        else:
             df = pd.read_csv(binary_test)
             seqs = df["sequence"].astype(str).tolist()
             y = df["label"].astype(int).to_numpy()

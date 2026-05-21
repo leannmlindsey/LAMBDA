@@ -7,8 +7,9 @@
 #SBATCH --output=lambda_baselines_%j.out
 #SBATCH --error=lambda_baselines_%j.err
 #
-# CPU-only baselines (GC + k=4 + k=6 k-mer compositions, logistic regression)
-# for the LAMBDA benchmark. Runs all (category × window) slices in one job.
+# CPU-only sequence-feature baselines (GC + k=4 + k=6 k-mer compositions,
+# logistic regression) for the LAMBDA benchmark. Runs all (category × window)
+# slices in one job; finishes in 10–15 minutes total.
 #
 # Output layout (auto-discovered by ../03_build_website_data.py):
 #   RESULTS_ROOT/baseline_gc/{binary,error_bias,genome_wide}/{2k,4k,8k}/*_predictions.csv
@@ -18,42 +19,58 @@
 #
 # Usage:
 #   sbatch run_baselines.slurm
-#
-# Prerequisites:
-#   1. paths.env populated in ../paths.env (DATASET_ROOT, RESULTS_ROOT)
-#   2. A conda env with: pandas, scikit-learn, scipy, matplotlib
-#      (the lambda_aggregate or any LAMBDA env will work)
 
 set -euo pipefail
 
+# ============================================================
+# CONFIGURATION — edit if your paths differ
+# ============================================================
+
+# Root of the LAMBDA dataset. Use the physical /gpfs path rather than the
+# /home/lindseylm/lindseylm symlink — compute nodes resolve the physical
+# path more reliably. The script auto-detects which subdir layout you have
+# at this root (Zenodo-style binary_segments_2k/, or the existing Biowulf
+# merged_datasets_filtered/2k/).
+DATASET_ROOT="/gpfs/gsfs12/users/Irp-jiang/share/lindseylm/lambda_final"
+
+# Where to write predictions, metrics, and the GC figure.
+RESULTS_ROOT="/data/lindseylm/GLM_EVALUATIONS/MODELS/LAMBDA/results"
+
+# Conda env (needs pandas, scikit-learn, scipy, matplotlib).
+# The gena_lm env created by GENA_LM_generic_sequence_classification/setup_lambda.sh
+# already has all of these (scipy comes in transitively via scikit-learn),
+# so it's the simplest one to reuse.
+BASELINES_ENV="gena_lm"
+
+# Which window sizes to process.
+WINDOWS="2k 4k 8k"
+
+# ============================================================
+
+# Allow ../paths.env to override the above (if it exists)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source paths from ../paths.env
-if [ ! -f "${SCRIPT_DIR}/../paths.env" ]; then
-    echo "ERROR: ${SCRIPT_DIR}/../paths.env not found"
-    exit 1
+if [ -f "${SCRIPT_DIR}/../paths.env" ]; then
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/../paths.env"
 fi
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/../paths.env"
 
-: "${DATASET_ROOT:?DATASET_ROOT not set in paths.env}"
-: "${RESULTS_ROOT:?RESULTS_ROOT not set in paths.env}"
-
-# Adjust the env name to match your cluster's setup.
 module load conda
-source activate "${BASELINES_ENV:-lambda_aggregate}"
+source activate "${BASELINES_ENV}"
 
 echo "============================================================"
 echo "LAMBDA sequence-feature baselines"
 echo "  DATASET_ROOT = ${DATASET_ROOT}"
 echo "  RESULTS_ROOT = ${RESULTS_ROOT}"
+echo "  WINDOWS      = ${WINDOWS}"
 echo "  Job ID       = ${SLURM_JOB_ID:-N/A}"
 echo "============================================================"
+
+mkdir -p "${RESULTS_ROOT}"
 
 python "${SCRIPT_DIR}/run_baselines.py" \
     --dataset_root "${DATASET_ROOT}" \
     --output_root "${RESULTS_ROOT}" \
-    --windows 2k 4k 8k \
+    --windows ${WINDOWS} \
     --plot
 
 echo "============================================================"
