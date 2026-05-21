@@ -48,14 +48,20 @@ WINDOWS="2k 4k 8k"
 # ============================================================
 
 # Allow ../paths.env to override the above (if it exists)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "${SCRIPT_DIR}/../paths.env" ]; then
-    # shellcheck disable=SC1091
-    source "${SCRIPT_DIR}/../paths.env"
+SCRIPT_DIR="/data/lindseylm/GLM_EVALUATIONS/NAR_GENOMICS_LAMBDA_REPO/LAMBDA/replication/baselines"
+# Load modules (suppress errors for non-Biowulf systems)
+module load conda 2>/dev/null || true
+module load CUDA/12.8 2>/dev/null || true
+
+# Set CUDA_HOME if not set
+if [ -z "${CUDA_HOME}" ]; then
+    export CUDA_HOME=$(dirname $(dirname $(which nvcc 2>/dev/null))) 2>/dev/null || true
 fi
 
-module load conda
-source activate "${BASELINES_ENV}"
+# Activate conda environment
+conda activate $BASELINES_ENV 2>/dev/null || source activate $BASELINES_ENV 2>/dev/null || true
+
+
 
 echo "============================================================"
 echo "LAMBDA sequence-feature baselines"
