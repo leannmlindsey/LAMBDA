@@ -28,32 +28,25 @@ set -euo pipefail
 # running, so BASH_SOURCE-based discovery does not work — must be hardcoded.
 SCRIPT_DIR="/data/lindseylm/GLM_EVALUATIONS/NAR_GENOMICS_LAMBDA_REPO/LAMBDA/replication"
 
+# Where the per-model prediction CSVs live. Same as RESULTS_ROOT in
+# run_baselines.slurm and 02_submit_inference_jobs.sh.
+RESULTS_ROOT="/data/lindseylm/GLM_EVALUATIONS/MODELS/LAMBDA/results"
+
 # Conda env (needs python>=3.10, pandas, scikit-learn).
-# The gena_lm env created by GENA_LM_generic_sequence_classification/setup_lambda.sh
-# has everything needed.
 AGGREGATE_ENV="gena_lm"
 
+# Optional metadata for the per-genome website JSON files. Leave blank to
+# skip — the metrics_summary.csv is produced regardless.
+GROUND_TRUTH_CSV=""        # e.g. /gpfs/.../lambda_final/lambda_ground_truth.csv
+TAXONOMY_CSV=""            # simple per-assembly taxonomy or GTDB-Tk TSV
+CHECKV_TSV=""              # CheckV quality_summary.tsv (optional)
+PHROG_CSV=""               # phage_annotated_segments.csv (optional)
+
 # ============================================================
-
-# paths.env lives next to this script — sourced for DATASET_ROOT / RESULTS_ROOT
-# / TAXONOMY_CSV / etc.
-if [ ! -f "${SCRIPT_DIR}/paths.env" ]; then
-    echo "ERROR: ${SCRIPT_DIR}/paths.env not found"
-    exit 1
-fi
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/paths.env"
-
-: "${RESULTS_ROOT:?RESULTS_ROOT not set in paths.env}"
 
 # Load modules (suppress errors for non-Biowulf systems)
 module load conda 2>/dev/null || true
 module load CUDA/12.8 2>/dev/null || true
-
-# Set CUDA_HOME if not set
-if [ -z "${CUDA_HOME:-}" ]; then
-    export CUDA_HOME=$(dirname $(dirname $(which nvcc 2>/dev/null))) 2>/dev/null || true
-fi
 
 # Activate conda environment (tries modern `conda activate` then falls back
 # to legacy `source activate`)
@@ -63,20 +56,10 @@ OUTPUT_DIR="${RESULTS_ROOT}/aggregated"
 mkdir -p "${OUTPUT_DIR}"
 
 OPTS=(--predictions "${RESULTS_ROOT}" --output "${OUTPUT_DIR}")
-
-# Optional metadata — only added if the variables are non-empty in paths.env.
-if [ -n "${DATASET_ROOT:-}" ] && [ -f "${DATASET_ROOT}/ground_truth.csv" ]; then
-    OPTS+=(--ground-truth "${DATASET_ROOT}/ground_truth.csv")
-fi
-if [ -n "${TAXONOMY_CSV:-}" ]; then
-    OPTS+=(--taxonomy "${TAXONOMY_CSV}")
-fi
-if [ -n "${CHECKV_TSV:-}" ]; then
-    OPTS+=(--checkv "${CHECKV_TSV}")
-fi
-if [ -n "${PHROG_CSV:-}" ]; then
-    OPTS+=(--phrog "${PHROG_CSV}")
-fi
+[ -n "${GROUND_TRUTH_CSV}" ] && [ -f "${GROUND_TRUTH_CSV}" ] && OPTS+=(--ground-truth "${GROUND_TRUTH_CSV}")
+[ -n "${TAXONOMY_CSV}" ]     && [ -f "${TAXONOMY_CSV}" ]     && OPTS+=(--taxonomy "${TAXONOMY_CSV}")
+[ -n "${CHECKV_TSV}" ]       && [ -f "${CHECKV_TSV}" ]       && OPTS+=(--checkv "${CHECKV_TSV}")
+[ -n "${PHROG_CSV}" ]        && [ -f "${PHROG_CSV}" ]        && OPTS+=(--phrog "${PHROG_CSV}")
 
 echo "============================================================"
 echo "Aggregating LAMBDA results"
