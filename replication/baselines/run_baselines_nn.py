@@ -234,24 +234,66 @@ def featurize_split(seqs: List[str], baseline: str,
     raise ValueError(f"unknown baseline {baseline}")
 
 
+# Same candidate layout resolver used by run_baselines.py, so this script
+# auto-detects whichever binary-split layout exists at DATASET_ROOT (the
+# Zenodo-style binary_segments_<w>/, the Biowulf merged_datasets_filtered/<w>/,
+# or a bare <w>/ directory).
+BINARY_SUBDIR_CANDIDATES = {
+    "2k": ["binary_segments_2k", "merged_datasets_filtered/2k", "2k"],
+    "4k": ["binary_segments_4k", "merged_datasets_filtered/4k", "4k"],
+    "8k": ["binary_segments_8k", "merged_datasets_filtered/8k", "8k"],
+}
+
+
+def resolve_binary_dir(dataset_root: Path, window: str) -> Path | None:
+    for cand in BINARY_SUBDIR_CANDIDATES.get(window, []):
+        p = dataset_root / cand
+        if p.is_dir() and (p / "train.csv").exists() and (p / "test.csv").exists():
+            return p
+    return None
+
+
+def load_val_split(binary_dir: Path, train_df: pd.DataFrame, seed: int):
+    """Return a validation DataFrame.
+
+    Prefers an on-disk dev.csv or val.csv. If neither exists, carve a
+    stratified 10% slice off the training set (deterministic via seed) so the
+    NN's early-stopping criterion still has a held-out set that is NOT the test
+    set -- matching the gLM protocol, which never touches test for model
+    selection.
+    """
+    for name in ("dev.csv", "val.csv", "valid.csv"):
+        p = binary_dir / name
+        if p.exists():
+            return pd.read_csv(p), f"on-disk {name}"
+    # Fall back to a held-out slice of train.
+    rng = np.random.default_rng(seed)
+    idx = np.arange(len(train_df))
+    rng.shuffle(idx)
+    n_val = max(1, int(0.10 * len(train_df)))
+    val_idx = idx[:n_val]
+    return train_df.iloc[val_idx].reset_index(drop=True), "10% carved from train"
+
+
 def run_one(baseline: str, window: str, dataset_root: Path,
             seed: int, device: torch.device) -> dict | None:
-    binary_dir = dataset_root / f"binary_segments_{window}"
+    binary_dir = resolve_binary_dir(dataset_root, window)
+    if binary_dir is None:
+        tried = BINARY_SUBDIR_CANDIDATES.get(window, [])
+        print(f"[skip] {baseline}/{window}: no binary dir with train.csv+test.csv under "
+              f"{dataset_root} (tried: {tried})")
+        return None
     train_csv = binary_dir / "train.csv"
-    dev_csv = binary_dir / "dev.csv"
     test_csv = binary_dir / "test.csv"
-    for p in (train_csv, dev_csv, test_csv):
-        if not p.exists():
-            print(f"[skip] missing {p}")
-            return None
 
     print(f"\n=== baseline={baseline}, window={window} ===")
-    print(f"  train: {train_csv}")
+    print(f"  binary dir: {binary_dir}")
     set_seed(seed)
 
     train_df = pd.read_csv(train_csv)
-    dev_df = pd.read_csv(dev_csv)
     test_df = pd.read_csv(test_csv)
+    dev_df, dev_src = load_val_split(binary_dir, train_df, seed)
+    print(f"  val split: {dev_src}")
     print(f"  sizes: train={len(train_df)}, dev={len(dev_df)}, test={len(test_df)}")
 
     train_seqs = train_df["sequence"].astype(str).tolist()
