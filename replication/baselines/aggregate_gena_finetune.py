@@ -51,8 +51,12 @@ def main() -> None:
     args = ap.parse_args()
 
     base = Path(args.base)
-    # (variant, window) -> list of (seed, mcc)
-    groups: dict[tuple[str, str], list[tuple] ] = defaultdict(list)
+
+    # First pass: collect every run, keyed by (variant, window, seed), keeping
+    # only the latest timestamp so stale earlier runs can't double-count.
+    # latest[(variant, window, seed)] = (timestamp_str, mcc)
+    latest: dict[tuple[str, str, object], tuple] = {}
+    dup_count = 0
 
     for summ in base.glob("*/*/training_summary.json"):
         run_dir = summ.parent
@@ -64,13 +68,28 @@ def main() -> None:
         summary = json.loads(summ.read_text())
         test = json.loads(test_json.read_text())
         variant = variant_from_model_name(summary.get("model_name", ""))
-        # test MCC may be keyed "mcc" or "test_mcc"
-        mcc = test.get("mcc", test.get("test_mcc"))
+        mcc = test.get("mcc", test.get("test_mcc", test.get("eval_mcc")))
         seed = summary.get("seed")
         if mcc is None:
             print(f"[warn] no mcc in {test_json}")
             continue
-        groups[(variant, window)].append((seed, float(mcc)))
+        # trailing _YYYYMMDD_HHMMSS in the run-dir name (lexicographically sortable)
+        ts = "_".join(run_dir.name.split("_")[-2:])
+        key = (variant, window, seed)
+        if key in latest:
+            dup_count += 1
+            if ts <= latest[key][0]:
+                continue   # keep the newer run already stored
+        latest[key] = (ts, float(mcc))
+
+    if dup_count:
+        print(f"[note] {dup_count} duplicate (variant,window,seed) run(s) found; "
+              f"kept the latest timestamp for each.")
+
+    # (variant, window) -> list of (seed, mcc)
+    groups: dict[tuple[str, str], list[tuple]] = defaultdict(list)
+    for (variant, window, seed), (ts, mcc) in latest.items():
+        groups[(variant, window)].append((seed, mcc))
 
     rows = []
     win_order = {"2k": 0, "4k": 1, "8k": 2}
