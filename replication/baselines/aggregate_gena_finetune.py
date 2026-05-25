@@ -48,8 +48,12 @@ def main() -> None:
         help="Directory containing <window>/<run_dir>/ subfolders",
     )
     ap.add_argument("--out_csv", default="gena_finetune_summary.csv")
+    ap.add_argument("--seeds", type=int, nargs="+", default=None,
+                    help="If given, keep only these seeds (e.g. --seeds 1 2 3 4 5 6 7 8 9 10). "
+                         "Use to drop stray runs like the default seed 42.")
     args = ap.parse_args()
 
+    keep_seeds = set(args.seeds) if args.seeds is not None else None
     base = Path(args.base)
 
     # First pass: collect every run, keyed by (variant, window, seed), keeping
@@ -73,6 +77,8 @@ def main() -> None:
         if mcc is None:
             print(f"[warn] no mcc in {test_json}")
             continue
+        if keep_seeds is not None and seed not in keep_seeds:
+            continue   # drop stray seeds (e.g. the default 42)
         # trailing _YYYYMMDD_HHMMSS in the run-dir name (lexicographically sortable)
         ts = "_".join(run_dir.name.split("_")[-2:])
         key = (variant, window, seed)
