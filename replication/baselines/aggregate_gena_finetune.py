@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""
+aggregate_gena_finetune.py
+
+Aggregate the GENA-LM fine-tuning replicate runs (10 seeds x 2 variants x 3
+windows = 60 jobs) into mean +/- std test MCC per (variant, window) -- the
+fine-tuned column for the LAMBDA tables.
+
+Each run directory written by finetune_gena_lm_phage.py contains:
+    test_results.json      -> {"mcc": ..., "f1": ..., "accuracy": ..., ...}
+    training_summary.json  -> {"model_name": "...gena-lm-bigbird-base-t2t" |
+                                              "...moderngena-base", "seed": ...}
+
+Run dirs live under:
+    <base>/<window>/gena_lm_lambda_filtered_<window>_<seed>_<lr>_<timestamp>/
+
+Usage (on Biowulf):
+    python aggregate_gena_finetune.py \\
+        --base /data/lindseylm/GLM_EVALUATIONS/MODELS/GENA-LM/GENA_LM_generic_sequence_classification/output/filtered
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import statistics
+from collections import defaultdict
+from pathlib import Path
+
+
+def variant_from_model_name(name: str) -> str:
+    n = name.lower()
+    if "bigbird" in n:
+        return "GENA-LM (BigBird)"
+    if "moderngena" in n:
+        return "ModernGENA"
+    if "bert-base" in n:
+        return "GENA-LM (BERT)"
+    return name  # fall back to the raw id
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--base",
+        default="/data/lindseylm/GLM_EVALUATIONS/MODELS/GENA-LM/"
+                "GENA_LM_generic_sequence_classification/output/filtered",
+        help="Directory containing <window>/<run_dir>/ subfolders",
+    )
+    ap.add_argument("--out_csv", default="gena_finetune_summary.csv")
+    args = ap.parse_args()
+
+    base = Path(args.base)
+    # (variant, window) -> list of (seed, mcc)
+    groups: dict[tuple[str, str], list[tuple] ] = defaultdict(list)
+
+    for summ in base.glob("*/*/training_summary.json"):
+        run_dir = summ.parent
+        window = run_dir.parent.name            # 2k / 4k / 8k
+        test_json = run_dir / "test_results.json"
+        if not test_json.exists():
+            print(f"[warn] no test_results.json in {run_dir}")
+            continue
+        summary = json.loads(summ.read_text())
+        test = json.loads(test_json.read_text())
+        variant = variant_from_model_name(summary.get("model_name", ""))
+        # test MCC may be keyed "mcc" or "test_mcc"
+        mcc = test.get("mcc", test.get("test_mcc"))
+        seed = summary.get("seed")
+        if mcc is None:
+            print(f"[warn] no mcc in {test_json}")
+            continue
+        groups[(variant, window)].append((seed, float(mcc)))
+
+    rows = []
+    win_order = {"2k": 0, "4k": 1, "8k": 2}
+    print(f"\n{'variant':<20}{'window':>7}{'n':>4}{'mean MCC':>11}{'std':>9}")
+    for (variant, window) in sorted(groups, key=lambda k: (k[0], win_order.get(k[1], 9))):
+        vals = [m for _, m in groups[(variant, window)]]
+        mean = statistics.mean(vals)
+        std = statistics.stdev(vals) if len(vals) > 1 else 0.0
+        n = len(vals)
+        print(f"{variant:<20}{window:>7}{n:>4}{mean:>11.4f}{std:>9.4f}")
+        rows.append({
+            "variant": variant, "window": window, "n": n,
+            "mean_mcc": round(mean, 4), "std_mcc": round(std, 4),
+            "seeds": ",".join(str(s) for s, _ in sorted(groups[(variant, window)])),
+        })
+
+    if rows:
+        import csv
+        with open(args.out_csv, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+        print(f"\nwrote {args.out_csv} ({len(rows)} rows)")
+        print("\nFine-tuned column (mean +/- std) for the tables:")
+        for r in rows:
+            print(f"  {r['variant']} {r['window']}: {r['mean_mcc']:.3f} \\pm {r['std_mcc']:.3f}  (n={r['n']})")
+    else:
+        print("\nNo runs found -- check --base path.")
+
+
+if __name__ == "__main__":
+    main()
