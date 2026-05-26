@@ -32,13 +32,13 @@ fi
 conda activate gena_lm 2>/dev/null || source activate gena_lm 2>/dev/null || true
 
 # ─── Configuration ──────────────────────────────────────────────────────────
-DATASET_TOOLS_DIR="/projects/bfzj/llindsey1/black_and_white/scripts/lambda_dataset_tools"
-GTDB_METADATA="/projects/bfzj/llindsey1/black_and_white/data/gtdb/metadata/bac120_metadata.tsv"
+INPUTS_DIR="/data/lindseylm/GLM_EVALUATIONS/NAR_GENOMICS_LAMBDA_REPO/LAMBDA_DATASET_CONSTRUCTION/outputs"
 
-CONTAMINATED="${DATASET_TOOLS_DIR}/gtdb_dataset_filtered_v3/contaminated_accessions.txt"
-TRAIN_ACC="${DATASET_TOOLS_DIR}/gtdb_dataset_filtered_v3/train_accessions.txt"
-DEV_ACC="${DATASET_TOOLS_DIR}/gtdb_dataset_filtered_v3/dev_accessions.txt"
-TEST_ACC="${DATASET_TOOLS_DIR}/gtdb_dataset_filtered_v3/test_accessions.txt"
+CONTAMINATED="${INPUTS_DIR}/contaminated_accessions.txt"
+TRAIN_ACC="${INPUTS_DIR}/train_accessions.txt"
+DEV_ACC="${INPUTS_DIR}/dev_accessions.txt"
+TEST_ACC="${INPUTS_DIR}/test_accessions.txt"
+GTDB_METADATA="${INPUTS_DIR}/bac120_metadata.tsv"
 
 SCRIPT_DIR="/data/lindseylm/GLM_EVALUATIONS/NAR_GENOMICS_LAMBDA_REPO/LAMBDA/dataset_creation"
 OUTPUT_DIR="/data/lindseylm/GLM_EVALUATIONS/MODELS/LAMBDA/results/filter_taxonomic_bias"
