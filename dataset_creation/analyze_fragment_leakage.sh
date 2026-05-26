@@ -28,11 +28,14 @@
 
 # ─── Conda activation (verbatim from run_train_gena_lm.sh — do not edit) ────
 module load conda 2>/dev/null || true
-module load BLAST+/2.16.0 2>/dev/null || true
+module load blast/2.15.0+ || { echo "ERROR: failed to load blast module"; exit 1; }
 if [ -z "${CUDA_HOME:-}" ]; then
     export CUDA_HOME=$(dirname $(dirname $(which nvcc 2>/dev/null))) 2>/dev/null || true
 fi
 conda activate gena_lm 2>/dev/null || source activate gena_lm 2>/dev/null || true
+
+# Sanity check: blastn must be on PATH after module load
+command -v blastn >/dev/null || { echo "ERROR: blastn not on PATH after module load"; exit 1; }
 
 # ─── Configuration ──────────────────────────────────────────────────────────
 DATASET_ROOT="/gpfs/gsfs12/users/Irp-jiang/share/lindseylm/lambda_final"
