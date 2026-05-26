@@ -42,8 +42,19 @@ def extract_taxonomy_level(taxonomy_string, level):
 
 
 def load_accessions(path):
+    """Read an accession list. Handles both single-column files and
+    whitespace-separated multi-column files (e.g. contaminated_accessions.txt
+    which has 'accession  hit_count' per line). The first whitespace-
+    separated token on each non-empty line is taken as the accession.
+    """
+    accs = []
     with open(path) as f:
-        return [line.strip() for line in f if line.strip()]
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            accs.append(line.split()[0])
+    return accs
 
 
 def parse_args():
