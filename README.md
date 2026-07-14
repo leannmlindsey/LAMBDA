@@ -10,7 +10,7 @@ This repository contains the code to **reproduce the LAMBDA benchmark end-to-end
 
 | Directory | Purpose |
 |-----------|---------|
-| [`replication/`](replication/) | End-to-end pipeline: download data + checkpoints from Zenodo → run inference for all 8 models × 3 categories → aggregate into the website JSON format. **Start here to reproduce paper results or run LAMBDA on your own data.** |
+| [`replication/`](replication/) | End-to-end pipeline: download data + checkpoints from Zenodo → run inference for all models × 3 categories → aggregate into the website JSON format. **Start here to reproduce paper results or run LAMBDA on your own data.** |
 | [`inference/`](inference/) | Per-model inference scripts — run a CSV of DNA sequences through a trained checkpoint and get predictions. One subdirectory per model. |
 | [`dataset_creation/`](dataset_creation/) | Scripts that build the LAMBDA dataset from GTDB + INPHARED source data (segment extraction, prophage filtering, BLAST cross-validation, train/dev/test splits). |
 
@@ -25,12 +25,12 @@ Source for the dashboard: [leannmlindsey/lambda-benchmark](https://github.com/le
 
 ## Download the Dataset
 
-The LAMBDA benchmark dataset is available on Zenodo:
-[https://doi.org/10.5281/zenodo.19236553](https://doi.org/10.5281/zenodo.19236553)
+The LAMBDA benchmark dataset is available on Zenodo. The link below is the **concept DOI** ("cite all versions"), which always resolves to the latest version:
+[https://doi.org/10.5281/zenodo.19236552](https://doi.org/10.5281/zenodo.19236552)
 
 ### Zenodo deposit layout
 
-The deposit is a single archive, **`LAMBDA_v1.tar.gz`**, which unpacks to `LAMBDA_v1/`. All segments are **pre-computed at 2k, 4k, and 8k** context windows — no segmentation step is required to run a model.
+The deposit contains three archives: the dataset **`LAMBDA_v1.tar.gz`**, the aggregated results table **`LAMBDA_v1_results.tar.gz`**, and the model checkpoints **`lambda_best_checkpoints.tar.gz`** (described below). `LAMBDA_v1.tar.gz` unpacks to `LAMBDA_v1/`, with all segments **pre-computed at 2k, 4k, and 8k** context windows — no segmentation step is required to run a model.
 
 | Path | Description |
 |------|-------------|
@@ -42,6 +42,8 @@ The deposit is a single archive, **`LAMBDA_v1.tar.gz`**, which unpacks to `LAMBD
 | `metadata/prophage_reference_locations.csv` | Ground-truth prophage locations (`NCBI Id, Assembly, start, end, Organism Name, Publication`) |
 | `metadata/gtdbtk.bac120.summary.tsv` | GTDB-Tk taxonomy per assembly |
 | `metadata/{phage,bacteria}_accessions/`, `pipeline_version.txt`, `checksums.md5` | Accession lists, dataset version, and file checksums |
+
+**Results table.** `LAMBDA_v1_results.tar.gz` contains `LAMBDA_v1_results.csv` — the master results table behind the paper's summary tables (one row per model × window, with linear-probe, 3-layer-NN, fine-tuned, diagnostic, and genome-wide metrics) — plus a column data dictionary.
 
 **Model checkpoints.** The **EVO2 and EVO2+SAE weights are provided on Zenodo** (`lambda_best_checkpoints.tar.gz`). Both are zero-shot, so this archive ships only the small trained EVO2 probe heads (linear probe + 3-layer NN, with scalers, per window) and a pointer to the EVO2+SAE scoring code; the base models are obtained from their upstream repos (Arc's [evo2](https://github.com/ArcInstitute/evo2) and [Evo2_SAE_LAMBDA_assessment](https://github.com/leannmlindsey/Evo2_SAE_LAMBDA_assessment)). All other model checkpoints — fine-tuned ProkBERT, NT v2, GENERanno, Caduceus, DNABERT-2, GENA-LM, and ModernGENA — are **available from the authors on request**; otherwise fine-tune each from the `train_val_test/` splits using its [training repository](#models-benchmarked).
 
@@ -59,6 +61,8 @@ The following genomic language models were evaluated on LAMBDA. The `inference/<
 | GENERanno | [`inference/generanno/`](inference/generanno/) | [Generanno_generic_sequence_classification](https://github.com/leannmlindsey/Generanno_generic_sequence_classification) |
 | EVO2 | [`inference/evo2_sae/`](inference/evo2_sae/) | [evo2](https://github.com/ArcInstitute/evo2) (Arc Institute) |
 | EVO2+SAE | [`inference/evo2_sae/`](inference/evo2_sae/) | [Evo2_SAE_LAMBDA_assessment](https://github.com/leannmlindsey/Evo2_SAE_LAMBDA_assessment) |
+| GENA-LM | via [`replication/new_model/`](replication/new_model/) | [GENA_LM_generic_sequence_classification](https://github.com/leannmlindsey/GENA_LM_generic_sequence_classification) |
+| ModernGENA | via [`replication/new_model/`](replication/new_model/) | [GENA_LM_generic_sequence_classification](https://github.com/leannmlindsey/GENA_LM_generic_sequence_classification) |
 
 ## What this repository supports
 
@@ -66,7 +70,7 @@ The scripts in [`replication/`](replication/) document three distinct workflows.
 
 ### 1. Reproduce the manuscript results
 
-Download the LAMBDA dataset + fine-tuned checkpoints from Zenodo, run inference for all 8 models across all LAMBDA splits, and aggregate into the per-genome JSON files consumed by the [dashboard](https://leannmlindsey.github.io/lambda-benchmark/).
+Download the LAMBDA dataset + fine-tuned checkpoints from Zenodo, run inference for all models across all LAMBDA splits, and aggregate into the per-genome JSON files consumed by the [dashboard](https://leannmlindsey.github.io/lambda-benchmark/).
 
 ```bash
 cd replication
@@ -75,7 +79,7 @@ bash 01_download_zenodo.sh                          # dataset + fine-tuned check
 bash 02_submit_inference_jobs.sh                    # SLURM jobs for every model × category × window
 python 03_build_website_data.py \
     --predictions ${RESULTS_ROOT} \
-    --ground-truth ${DATASET_ROOT}/ground_truth.csv \
+    --ground-truth ${DATASET_ROOT}/metadata/prophage_reference_locations.csv \
     --taxonomy ${TAXONOMY_CSV} \
     --output ${RESULTS_ROOT}/aggregated
 ```
