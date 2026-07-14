@@ -30,28 +30,20 @@ The LAMBDA benchmark dataset is available on Zenodo:
 
 ### Zenodo deposit layout
 
-The deposit contains three archives:
-
-**`lambda_dataset.tar.gz`** — pre-built CSV splits + metadata:
+The deposit is a single archive, **`LAMBDA_v1.tar.gz`**, which unpacks to `LAMBDA_v1/`. All segments are **pre-computed at 2k, 4k, and 8k** context windows — no segmentation step is required to run a model.
 
 | Path | Description |
 |------|-------------|
-| `binary_segments_{2k,4k,8k}/{train,dev,test}.csv` | Binary classification splits at each window size |
-| `error_and_bias_{2k,4k,8k}/test.csv` | Error & bias diagnostic splits |
-| `ground_truth.csv` | Prophage locations (Assembly, NCBI Id, start, end, Organism Name) |
-| `taxonomy.csv` | Per-assembly taxonomy (phylum / class / order / family / genus / species) |
+| `train_val_test/{2k,4k,8k}/{train,val,test}.csv` | Phage-vs-bacteria classification splits at each window size (`segment_id, sequence, label, source`) |
+| `genome_wide/{2k,4k,8k}/<assembly>_genomic_segments.csv` | Pre-segmented whole-genome test set (80 genomes), with per-window ground-truth labels (`seq_id, start, end, sequence, label, in_prophage, prophage_start, prophage_end`) |
+| `fpr_test/{2k,4k,8k}/` | Bacteria-only segments (false-positive-rate control) |
+| `fnr_test/{2k,4k,8k}/` | Phage-only segments (false-negative-rate control), plus `fnr_test/2k/phage_annotated_segments_2k.csv` for the PHROG functional-category analysis |
+| `shuffled_controls/{2k,4k,8k}/test_shuffled.csv` | GC-preserving shuffled control (GC-bias diagnostic) |
+| `metadata/prophage_reference_locations.csv` | Ground-truth prophage locations (`NCBI Id, Assembly, start, end, Organism Name, Publication`) |
+| `metadata/gtdbtk.bac120.summary.tsv` | GTDB-Tk taxonomy per assembly |
+| `metadata/{phage,bacteria}_accessions/`, `pipeline_version.txt`, `checksums.md5` | Accession lists, dataset version, and file checksums |
 
-**`lambda_fastas.tar.gz`** — source FASTAs for the genome-wide test set:
-
-| Path | Description |
-|------|-------------|
-| `genome_wide_fastas/<assembly>.fna` | One FASTA per test-set bacterial assembly. The replication pipeline slides 2k/4k/8k windows over these on-the-fly to produce segmented CSVs for genome-wide inference. |
-
-**`lambda_checkpoints.tar.gz`** — fine-tuned model checkpoints:
-
-| Path | Description |
-|------|-------------|
-| `<model>/<window>/` | One subdirectory per model × window size (e.g., `dnabert2/2k/`, `nucleotide_transformer_v2/8k/`). The contents are model-specific — see each model's [inference README](inference/) for details. |
+**Model checkpoints.** Checkpoints/probe heads for the **best-performing models on the genome-wide task — EVO2, EVO2+SAE, and ProkBERT — are provided** (`lambda_best_checkpoints.tar.gz`). Because EVO2 and EVO2+SAE are zero-shot, that archive contains only the small trained probe / SAE-classifier heads; the base models are obtained from their upstream repos (Arc's [evo2](https://github.com/ArcInstitute/evo2) and [Evo2_SAE_LAMBDA_assessment](https://github.com/leannmlindsey/Evo2_SAE_LAMBDA_assessment)). The remaining fine-tuned checkpoints (NT v2, GENERanno, Caduceus, DNABERT-2, GENA-LM, ModernGENA) are large (tens of GB) and are **available from the authors on request**; otherwise fine-tune each from the `train_val_test/` splits using its [training repository](#models-benchmarked).
 
 ## Models Benchmarked
 
@@ -138,7 +130,9 @@ Leann M. Lindsey, Nicole L. Pershing, Keith Dufault-Thompson, Ho-jin Gwak, Anisa
 
 ## Citation
 
-> *bioRxiv preprint coming soon — citation will be added here.*
+If you use LAMBDA in your research, please cite our preprint:
+
+> Lindsey, L. M., Pershing, N. L., Dufault-Thompson, K., Gwak, H., Habib, A., Schindler, A., Rakheja, A., Round, J., Stephens, W. Z., Blaschke, A. J., Sundar, H., & Jiang, X. (2026). *LAMBDA: A Prophage Detection Benchmark for Genomic Language Models.* bioRxiv. https://doi.org/10.64898/2026.03.26.714501
 
 ## License
 

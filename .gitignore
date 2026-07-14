@@ -6,3 +6,50 @@ __pycache__/
 .ipynb_checkpoints/
 *.swp
 *.swo
+
+# ── Local data / results (never commit) ──────────────────────────────────────
+outputs/
+results/
+
+# ── Internal-only files: NOT for the public reviewer/user repo ───────────────
+# Internal handoffs, runbooks, and agent-facing docs
+replication/LAMBDA_RUN_LEDGER.md
+replication/WINNER_MODEL_INFERENCE_RUNBOOK.md
+replication/RESULTS_HARVESTING.md
+replication/MODEL_PROVENANCE_AND_METHOD_TYPES.md
+replication/VIZ_ANALYSIS_AGENT_SPEC.md
+replication/DELTA_AI_SETUP.md
+replication/DELTA_FINISH_RUNBOOK.md
+replication/CADUCEUS_RANDOM_BASELINE_HANDOFF.md
+replication/CADUCEUS_RANDOM_BASELINE_HANDOFF.txt
+
+# NVIDIA cuFFT / GH200 bug reproduction bundle (filed with NVIDIA separately)
+replication/CUFFT_GH200_BUG_REPORT.md
+replication/EVO2_CUFFT_FFT_FAILURE_ANALYSIS.md
+replication/cufft_*
+replication/make_cufft_bundle.sh
+replication/tally_cufft_repro.py
+
+# EVO2 internal run-management / debugging
+replication/capture_evo2_env.sbatch
+replication/check_evo2_completeness.py
+replication/check_evo2sae_completeness.py
+replication/clean_corrupt_evo2sae.sh
+replication/collect_evo2_logs.py
+replication/diagnose_evo2_logs.py
+replication/retry_corrupt_evo2sae.py
+replication/retry_evo2_until_done.sh
+replication/retry_sae_interactive.sh
+
+# Internal Delta tooling / completeness checks
+replication/delta_inventory.py
+replication/check_completeness.py
+replication/validate_all_rowcounts.py
+replication/pack_results.sbatch
+
+# Local checkpoint archiving (personal Zenodo packaging, not part of the pipeline)
+replication/gather_checkpoints.py
+
+# Local v1 baseline re-run scripts (one-off; repo ships run_baselines.py)
+replication/baselines/deploy_baseline_heads_gw.py
+replication/baselines/run_baselines_v1.py

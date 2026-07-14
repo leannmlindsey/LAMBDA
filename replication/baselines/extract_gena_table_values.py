@@ -116,12 +116,13 @@ def read_embedding(base: str, variant: str, w: str) -> dict:
            "present": r is not None, "unresolved_keys": False, "available_keys": None}
     if r is None:
         return out
-    out["lp_model"] = first_key(r, ["linear_probe_mcc", "linear_probe_model_mcc", "lp_mcc"])
+    out["lp_model"] = first_key(r, ["pretrained_linear_probe_mcc", "linear_probe_mcc",
+                                    "linear_probe_model_mcc", "lp_mcc"])
     out["lp_random"] = first_key(r, ["random_linear_probe_mcc", "linear_probe_random_mcc",
                                      "random_baseline_linear_mcc", "random_lp_mcc"])
-    out["nn_model"] = first_key(r, ["three_layer_nn_mcc", "nn_mcc", "three_layer_mcc",
-                                    "3_layer_nn_mcc", "mlp_mcc"])
-    out["nn_random"] = first_key(r, ["random_three_layer_nn_mcc", "random_nn_mcc",
+    out["nn_model"] = first_key(r, ["pretrained_nn_mcc", "three_layer_nn_mcc", "nn_mcc",
+                                    "three_layer_mcc", "3_layer_nn_mcc", "mlp_mcc"])
+    out["nn_random"] = first_key(r, ["random_nn_mcc", "random_three_layer_nn_mcc",
                                      "three_layer_nn_random_mcc", "random_baseline_nn_mcc"])
     # Nested fallbacks (e.g., {"random_baseline_linear": {"mcc": ...}})
     if out["lp_random"] is None and isinstance(r.get("random_baseline_linear"), dict):
