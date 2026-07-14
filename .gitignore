@@ -47,9 +47,6 @@ replication/check_completeness.py
 replication/validate_all_rowcounts.py
 replication/pack_results.sbatch
 
-# Local checkpoint archiving (personal Zenodo packaging, not part of the pipeline)
-replication/gather_checkpoints.py
-
 # Local v1 baseline re-run scripts (one-off; repo ships run_baselines.py)
 replication/baselines/deploy_baseline_heads_gw.py
 replication/baselines/run_baselines_v1.py
