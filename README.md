@@ -1,5 +1,14 @@
 # LAMBDA: A Prophage Detection Benchmark for Genomic Language Models
 
+LAMBDA is a benchmark and toolkit for **prophage detection** with genomic language models (gLMs). Prophages, which are bacteriophage genomes integrated into their bacterial hosts, have no universal sequence signature, so recovering them across a whole genome is a stringent test of whether a DNA language model has learned transferable, sequence-level features rather than local motifs. LAMBDA evaluates gLM embeddings on phage versus bacteria discrimination across four categories of increasing difficulty: linear and nonlinear probing, fine-tuning, diagnostic controls, and genome-wide prophage detection.
+
+- **For genomic language model developers:** a diagnostic benchmark rather than a single leaderboard number. It separates embedding quality (linear and nonlinear probes) from fine-tuned accuracy, uses dedicated controls to expose GC-content and compositional bias, breaks performance down by bacterial host taxonomy and viral lineage so you can see which sequences a model fails on, and compares every gLM against simple feature baselines (GC, k-mer) and established prophage tools (geNomad, PHASTER, VIBRANT, and others).
+- **For researchers annotating bacterial genomes:** genome-wide prophage prediction on new bacterial genomes with the benchmarked models, an interactive visualizer to compare prophage-prediction tools side by side (gLMs alongside geNomad, PHASTER, VIBRANT, and others), a consensus view of regions predicted by multiple tools, and PHROG functional annotation of predicted prophage genes.
+
+### ▶ Explore the interactive benchmark → [leannmlindsey.github.io/lambda-benchmark](https://leannmlindsey.github.io/lambda-benchmark/)
+
+[![LAMBDA interactive benchmark, genome-wide prophage detection](docs/lambda_benchmark.png)](https://leannmlindsey.github.io/lambda-benchmark/)
+
 ## Abstract
 
 Transformer-based genomic sequence models represent an emerging frontier in computational biology. Yet, their embeddings have not yet shown the same level of predictive power as natural and protein language models, indicating a gap between current implementations and theoretical promise. Existing benchmarks for DNA language models primarily focus on classifying regulatory elements in eukaryotic genomes, leaving open the fundamental question of whether these models learn sequence-level features across whole genomes. We introduce LAMBDA, a benchmark designed to rigorously evaluate genome language model embeddings through phage-bacteria sequence discrimination across four categories of increasing complexity: probing tasks, fine-tuning assessments, diagnostic tests, and genome-wide prophage detection. Our comprehensive analysis of current genomic language models provides novel insights into the importance of training data quality relative to model size, the need for domain-specific training, and the application of genomic language models for detecting prophage sequences. This benchmark represents a challenging genomic annotation task in the bacterial domain and addresses a key computational problem with direct relevance to microbiology and medicine.
@@ -61,8 +70,8 @@ The following genomic language models were evaluated on LAMBDA. The `inference/<
 | GENERanno | [`inference/generanno/`](inference/generanno/) | [Generanno_generic_sequence_classification](https://github.com/leannmlindsey/Generanno_generic_sequence_classification) |
 | EVO2 | [`inference/evo2_sae/`](inference/evo2_sae/) | [evo2](https://github.com/ArcInstitute/evo2) (Arc Institute) |
 | EVO2+SAE | [`inference/evo2_sae/`](inference/evo2_sae/) | [Evo2_SAE_LAMBDA_assessment](https://github.com/leannmlindsey/Evo2_SAE_LAMBDA_assessment) |
-| GENA-LM | via [`replication/new_model/`](replication/new_model/) | [GENA_LM_generic_sequence_classification](https://github.com/leannmlindsey/GENA_LM_generic_sequence_classification) |
-| ModernGENA | via [`replication/new_model/`](replication/new_model/) | [GENA_LM_generic_sequence_classification](https://github.com/leannmlindsey/GENA_LM_generic_sequence_classification) |
+| GENA-LM | [`replication/new_model/`](replication/new_model/) | [GENA_LM_generic_sequence_classification](https://github.com/leannmlindsey/GENA_LM_generic_sequence_classification) |
+| ModernGENA | [`replication/new_model/`](replication/new_model/) | [GENA_LM_generic_sequence_classification](https://github.com/leannmlindsey/GENA_LM_generic_sequence_classification) |
 
 ## What this repository supports
 
@@ -119,6 +128,10 @@ python 03_build_website_data.py --predictions ${RESULTS_ROOT} --output ${RESULTS
 See [`replication/README.md`](replication/README.md) for full step-by-step instructions for all three use cases, including environment setup, CSV schemas, and how to view the dashboard locally.
 
 Under the hood, each step calls the per-model scripts in [`inference/<model>/`](inference/). If you want to run a single model in isolation (without the orchestrator), each subdirectory has its own README with a working quick-start command.
+
+## Help expand the benchmark
+
+We are actively growing the genome-wide test set for future versions of LAMBDA. **If you have experimentally confirmed or well-curated prophage locations in bacterial genomes, we would love to include them.** Please email a link to the relevant publication or dataset to [leannmlindsey@gmail.com](mailto:leannmlindsey@gmail.com), and we will consider it for the next release. Higher-quality, more diverse ground truth makes the benchmark better for everyone.
 
 ## Authors
 
