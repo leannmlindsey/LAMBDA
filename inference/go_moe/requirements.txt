@@ -1,0 +1,19 @@
+# GenomeOcean-MoE LAMBDA embedding analysis.
+# These are already provided by the go-embed container (docker.io/lmlindsey/go-embed:1.0);
+# this file documents the environment for running outside the container.
+#
+# IMPORTANT: GenomeOcean-MoE is loaded natively as a Mixtral model with
+# trust_remote_code=False. The vendored remote-code path returns incorrect
+# weights on modern transformers, so a native MixtralModel/MixtralForCausalLM
+# in transformers is required (>=4.40).
+transformers>=4.40,<5
+torch>=2.3
+accelerate
+safetensors
+sentencepiece
+protobuf
+numpy<2
+scikit-learn
+matplotlib
+pandas
+tqdm
